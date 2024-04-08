@@ -18,7 +18,7 @@ Assignments and Provisional Schedule
 
 Individual assignments, together with a preliminary schedule are listed below. Generally, __solutions are due at 10:00 AM on Mondays before the next meeting__ (where we will discuss the solutions and present the next assignment). Please submit your solutions ahead of time.
 
-Mondays before the next meeting should be used for code review and feedback of your colleagues' submissions. Everybody is supposed to provide code review and feedback during the course of the semester. Your feedback will help your colleagues, and is supposed to stimulate collaborative work which will be an asset during the final team project.
+Mondays before the next meeting should be used for code review and feedback of your colleagues' submissions. __Everybody is supposed to provide code review and feedback__ during the course of the semester. Your feedback will help your colleagues, and is supposed to stimulate collaborative work which will be an asset during the final team project.
 
 Upon receiving code review and feedback, you are encouraged to commit code revisions prior to our Thursday meetings.
 
