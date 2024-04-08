@@ -41,7 +41,7 @@ Please note: As we will meet on Tuesdays, the latest possible date for submissio
 
 * May-28-2024 (A6) --- Team Project IV
 
-* Jun-11-2024 (A6 )--- Team Project IV
+* Jun-11-2024 (A6) --- Team Project IV
 
 * Jun-18-2024 (A6) --- Final Project Meeting: Battle of the Robots
 
