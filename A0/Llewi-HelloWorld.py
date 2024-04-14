@@ -1,10 +1,6 @@
-input = open("HelloWorld-test1.in", "r")
-lines = input.readlines()
-input.close()
+file_name = input("Enter input file name:")
 
-output = open("HelloWorld-test1.out", "w")
-output.write("Hello World!\n")
-for line in lines:
-    output.write(line)
-
-output.close()
+print("Hello World!")
+with open(file_name, "r") as file:
+	for line in file:
+		print(line.rstrip())
