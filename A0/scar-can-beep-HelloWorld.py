@@ -1,3 +1,4 @@
-print('Hello World!')
+output = open('HelloWorld-test1.out', 'w')
+output.write('Hello World!\n')
 with open('HelloWorld-test1.in', 'r') as hello_input:
-    print(hello_input.readline(), end='')
+    output.write(hello_input.readline())
