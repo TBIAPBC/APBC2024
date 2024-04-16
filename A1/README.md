@@ -49,7 +49,7 @@ Hints:
 
 - Make sure that your program understands calls like
 ```
-mtw-WordCount.py dateiname
+mtw-WordCount.py < dateiname
 mtw-WordCount.py -I dateiname
 mtw-WordCount.py -l -I dateiname
 ```
