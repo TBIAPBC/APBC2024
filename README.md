@@ -54,6 +54,7 @@ Potentially useful links
 * [Git](https://git-scm.com): main page for the git version control system
 * [Git Introduction](https://imada.sdu.dk/~jlandersen/_static/git.pdf): an intro to distributed version control, using Git.
 * [Git school](https://github.com/git-school): git course material
+* ... including a cool [Git visualization](http://git-school.github.io/visualizing-git/).
 * ... and here is a [video](https://vimeo.com/314971616/ed90cde6ec) demonstrating git features (using this visualization tool)
 * [Interactive Tutorial](https://learngitbranching.js.org/): introductory and advanced git tutorial
 * [Git Cheat Sheet](https://education.github.com/git-cheat-sheet-education.pdf)
