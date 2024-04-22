@@ -36,9 +36,9 @@ def get_word_count(file_name, ignore=False, return_list=False):
             if char in special_chars or char == '\n':
                 if word == '':
                     continue
-                try:
+                if word in all_words:
                     all_words[word]+=1
-                except:
+                else:
                     all_words[word]=1
                 count+=1
                 word = ''
@@ -54,7 +54,7 @@ def get_word_count(file_name, ignore=False, return_list=False):
         for i in sorted_items: 
             print(f'{i}\t{all_words[i]}')
     else:
-        print(f'{len(all_words)}/{count}')
+        print(f'{len(all_words)} / {count}')
 
 file_name, ignore, return_list = call_parser()
 get_word_count(file_name, ignore, return_list)
