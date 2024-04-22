@@ -10,15 +10,13 @@ def main(input_text: str, ignore_case, print_list):
     
     if ignore_case:
         input_text = input_text.lower()
-
-    # Replace special characters with space
-    non_word_chars = find_non_word_chars(input_text)
-    for char in non_word_chars:
-        input_text = input_text.replace(char, " ")
+    
+    # Get words using regex pattern
+    pattern = re.compile(r'[a-zA-ZäöüÄÖÜß]+')
+    words = pattern.findall(input_text)
     
     # Create count dict
     word_dict = {}
-    words = input_text.split() # splits words separated by one or multiple whitespace characters
     for word in words:
         if word in word_dict:
             word_dict[word] += 1
@@ -34,14 +32,6 @@ def main(input_text: str, ignore_case, print_list):
     sorted_list = sorted(word_dict.items(), key=lambda item: (-item[1], item[0]))
     for item in sorted_list:
         print(f"{item[0]}\t{item[1]}")
-
-
-def find_non_word_chars(input_text: str):
-    input_text = input_text.replace("\n", " ")
-    pattern = re.compile(r'[^a-zA-ZäöüÄÖÜß]')
-    non_word_chars = set(pattern.findall(input_text))
-    #non_word_chars.remove('\\')
-    return non_word_chars
 
 
 if __name__ == "__main__":
