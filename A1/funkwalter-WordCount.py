@@ -21,7 +21,7 @@ def main():
     if len(sys.argv) == 1:
         input_text = sys.stdin.read()
     else:
-        with open(sys.argv[1], 'r') as file:
+        with open(sys.argv[1], 'r', encoding='utf-8') as file:
             input_text = file.read()
 
     words = process_text(input_text, ignore_case)
