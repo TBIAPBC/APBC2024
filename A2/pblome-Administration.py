@@ -66,10 +66,8 @@ def bab(no_cities, bound, cities, dist, optimise):
                 # not a valid path
         unique_sols = list(set([tuple(sorted(sol)) for sol in solutions]))
         sorted_sols = sorted(unique_sols)
-        #opt_value = min([cost[sol] for sol in sorted_sols])
         return sorted_sols
 
-    #return sorted_sols, opt_value
 
 def read_matrix(file):
     header = file[0].split()
