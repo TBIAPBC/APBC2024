@@ -88,6 +88,6 @@ if __name__ == "__main__":
     result = bnb(all_cities, [], 0)
 
     if args.optimize:
-        print(min(result.values()))
+        print(int(min(result.values())))
     else:
         print("\n".join(sorted(result.keys())))
