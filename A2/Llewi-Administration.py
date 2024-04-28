@@ -25,28 +25,6 @@ def read_input(input_text):
 
     return city_names, cost_mat, cost_limit
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("filename", nargs="*", default=argparse.SUPPRESS)
-    parser.add_argument("-o", "--optimize", action="store_true")
-    args = parser.parse_args()
-
-    # Try to read from standard input
-    if not sys.stdin.isatty():
-        input_text = sys.stdin.readlines()
-    else:
-        # Alternatively read from file
-        try:
-            file_name = args.filename[0]
-        except:
-            exit("Please provide filename")
-        input_text = open(file_name, "r", encoding="UTF-8").readlines()
-
-    #main(input_text, args.optimize)
-
-    city_names, cost_mat, cost_limit = read_input(input_text)
-
 
 def bnb(remaining_cities, current_path, current_cost):
 
@@ -78,11 +56,38 @@ def bnb(remaining_cities, current_path, current_cost):
     
     return all_solutions
 
-n = cost_mat.shape[0]
-all_cities = [i for i in range(n)]
-result = bnb(all_cities, [], 0)
 
-if args.optimize:
-    print(min(result.values()))
-else:
-    print("\n".join(sorted(result.keys())))
+if __name__ == "__main__":
+    
+    # Handle parameters
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename", nargs="*", default=argparse.SUPPRESS)
+    parser.add_argument("-o", "--optimize", action="store_true")
+    args = parser.parse_args()
+
+    # Read file
+    if not sys.stdin.isatty():
+        # Read from standard input
+        input_text = sys.stdin.readlines()
+    else:
+        # Alternatively read from file
+        try:
+            file_name = args.filename[0]
+        except:
+            exit("Please provide filename")
+        input_text = open(file_name, "r", encoding="UTF-8").readlines()
+
+    # Parse file
+    city_names, cost_mat, cost_limit = read_input(input_text)
+
+    # Run algorithm
+    n = cost_mat.shape[0]
+    all_cities = [i for i in range(n)]
+
+    # Here comes the logic
+    result = bnb(all_cities, [], 0)
+
+    if args.optimize:
+        print(min(result.values()))
+    else:
+        print("\n".join(sorted(result.keys())))
