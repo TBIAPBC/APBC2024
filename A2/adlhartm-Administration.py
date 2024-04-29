@@ -191,7 +191,9 @@ def main(args):
                                      optimize = args.o, hide_solutions = hide_solutions)
         
         # update cost limit, will change only if optimize == True 
-        cost_limit = result
+        if args.o: 
+            if result < cost_limit: 
+                cost_limit = result
     
         
     end = time.time()
