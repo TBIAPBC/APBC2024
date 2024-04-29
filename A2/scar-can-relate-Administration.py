@@ -38,6 +38,8 @@ def get_matrix(file_name):
     with open(file_name,'r') as f:
         first = f.readline().split()
         n_capitals = int(first[0])
+        if n_capitals%2 != 0:
+            raise InputError('The input file specifies an odd number of capitals!')
         bound = int(first[1])
         capitals = f.readline().split()
         matrix_list = []
@@ -60,10 +62,7 @@ if optimise:
         cost=sum(matrix[pair[0]][pair[1]] for pair in solution)
         if cost <= bound:
             bound = cost
-            endresult = solution
-    for pair in endresult:
-        print(pair,end=' ')
-    print('')
+    print(bound)
 
 else:   
     for solution in solutions:
