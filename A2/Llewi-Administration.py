@@ -26,10 +26,10 @@ def read_input(input_text):
     return city_names, cost_mat, cost_limit
 
 
-def bnb(remaining_cities, current_path, current_cost):
+def bnb(remaining_cities, current_path, current_cost, upper_bound, optimize):
 
     # Bound - Check cost
-    if current_cost > cost_limit:
+    if current_cost > upper_bound:
         return {}
     
     # Check finish
@@ -51,9 +51,13 @@ def bnb(remaining_cities, current_path, current_cost):
         next_path = [*current_path, next_pair]
         next_cost = current_cost + cost_mat[next_pair[0], next_pair[1]]
 
-        solutions = bnb(next_remaining_cities, next_path, next_cost)
+        solutions = bnb(next_remaining_cities, next_path, next_cost, upper_bound, optimize)
         all_solutions.update(solutions)
-    
+
+        # Update upper bound
+        if optimize and solutions:
+            upper_bound = min(upper_bound, min(solutions.values()))
+
     return all_solutions
 
 
@@ -85,7 +89,7 @@ if __name__ == "__main__":
     all_cities = [i for i in range(n)]
 
     # Here comes the logic
-    result = bnb(all_cities, [], 0)
+    result = bnb(all_cities, [], 0, upper_bound=cost_limit, optimize=args.optimize)
 
     if args.optimize:
         print(int(min(result.values())))
