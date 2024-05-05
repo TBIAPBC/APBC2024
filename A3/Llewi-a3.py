@@ -30,34 +30,35 @@ def read_input(input_text, diagonal):
     # Fill south matrix
     for i in range(n_row-1):
         # Leave first line at -inf, real weights start at second line
-        print(i)
-        print(input_text[i].split())
         from_north[i+1,] = input_text[i].split()
     
     # Fill east matrix
-    line_offset = n - 1
-    for i in range(n):
+    line_offset = n_row - 1
+    for i in range(n_row):
         # Leave first row at -inf
         from_west[i, 1:] = input_text[i+line_offset].split()
 
     # Fill diagonal matrix
     if diagonal:
-        line_offset = 2*n - 1
-        for i in range(n - 1):
+        line_offset = 2*n_row - 1
+        for i in range(n_row - 1):
             from_diag[i+1, 1:] = input_text[i+line_offset].split()
 
     return from_north, from_west, from_diag
 
 
 def logic_now(from_north, from_west, from_diag, diagonal, trace):
-    n = from_north.shape[0]
+    n_row, n_col = from_north.shape
 
-    # initialise dynamic programming matrix
-    dp_mat = np.full((n + 1, n + 1), -math.inf)
+    # initialise dynamic programming matrix (requires additional row and column for initialisation)
+    dp_mat = np.full((n_row + 1, n_col + 1), -math.inf)
+
+    # Store directions during algorithm - leads to higher memory requirements but requires no computation in backtracing
+    backtrace_mat = [["-"] * n_col for _ in range(n_row)]
 
     # Walk through matrix column by column, row by row and build optimal partial solution.
-    for row_id in range(n):
-        for col_id in range(n):
+    for row_id in range(n_row):
+        for col_id in range(n_col):
 
             # Indexing into dp_mat requires offset
             dp_row = row_id + 1
@@ -71,44 +72,28 @@ def logic_now(from_north, from_west, from_diag, diagonal, trace):
             # Calculate value for each potential predecessor
             from_north_val = dp_mat[dp_row - 1, dp_col] + from_north[row_id, col_id]
             from_west_val = dp_mat[dp_row, dp_col - 1] + from_west[row_id, col_id]
-            from_diag_val = -math.inf
-            if diagonal:
-                from_diag_val = dp_mat[dp_row - 1, dp_col - 1] + from_diag[row_id, col_id]
+            #from_diag_val = -math.inf
+            #if diagonal:
+            from_diag_val = dp_mat[dp_row - 1, dp_col - 1] + from_diag[row_id, col_id]
 
             # Assign highest scoring value
-            
-            dp_mat[dp_row, dp_col] = max(from_north_val, from_west_val, from_diag_val)
+            dp_mat[dp_row, dp_col] = np.max([from_north_val, from_west_val, from_diag_val])
 
+            # Store direction corresponding to highest scoring value
+            direction_index = np.argmax([from_north_val, from_west_val, from_diag_val])
+            backtrace_mat[row_id][col_id] = ["S", "E", "D"][direction_index]
             # debug print
-            if row_id==0 and col_id < 3:
-                print(f"Step {col_id}")
-                print(f"update value at {row_id}/{col_id}")
-                print(f"max of {from_north_val} {from_west_val} {from_diag_val}")
+            #if row_id==0 and col_id < 3:
+            #    print(f"Step {col_id}")
+            #    print(f"update value at {row_id}/{col_id}")
+            #    print(f"max of {from_north_val} {from_west_val} {from_diag_val}")
+            #    print(dp_mat)
 
-                
-                print(dp_mat)
-
-            # dp matrix has initial row and column that should be at -1, create indices
-            
-            #current_field = dp_mat[x_dp, y_dp]
-            #from_north = dp_mat[x_dp, y_dp] + south_weights[x, y]
-            #from_west = dp_mat[x_dp, y_dp] + east_weights[x, y]
-
-    #print("south weights")
-    #print(from_north)
-    #print("east weights")
-    #print(from_west)
-    #print("diag weights")
-    #print(from_diag)
-    stop=0
-    print("done")
-    print(dp_mat)
-
-    dp_row = n
-    dp_col = n
+    dp_row = n_row
+    dp_col = n_col
     path = ""
     i = 0
-    while (dp_col > 0 or dp_row > 0) and i < 10:
+    while dp_col > 1 or dp_row > 1:
         row_id = dp_row - 1
         col_id = dp_col - 1
         i += 1
@@ -154,6 +139,7 @@ if __name__ == "__main__":
     parser.add_argument("filename", nargs="*", default=argparse.SUPPRESS)
     parser.add_argument("-d", "--diagonal", action="store_true")
     parser.add_argument("-t", "--trace", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
     #parser.add_argument("-o", "--optimize", action="store_true")
     args = parser.parse_args()
 
@@ -171,5 +157,13 @@ if __name__ == "__main__":
 
     # Parse file
     from_north, from_west, from_diag = read_input(input_text, args.diagonal)
+
+    if args.verbose:
+        print("south weights")
+        print(from_north)
+        print("east weights")
+        print(from_west)
+        print("diag weights")
+        print(from_diag)
 
     logic_now(from_north, from_west, from_diag, args.diagonal, args.trace)
