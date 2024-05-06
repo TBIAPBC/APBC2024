@@ -36,7 +36,7 @@ def read_input(input_text, diagonal):
         from_west[i, 1:] = input_text[i+line_offset].split()
 
     # Fill diagonal matrix
-    if diagonal:
+    if diagonal and len(input_text) > 2*n_row - 1:
         line_offset = 2*n_row - 1
         for i in range(n_row - 1):
             from_diag[i+1, 1:] = input_text[i+line_offset].split()
