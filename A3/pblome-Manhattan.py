@@ -4,24 +4,24 @@ def read_matrix(file, diagonal):
 
     n = len(file[0].split())
     
-    n_s_matrix = file[:n-1] # reads first uncommented non-empty n-1 lines (but in HV2 we only have n-2 lines -> mistake ?)
-    w_e_matrix = file[n-1:2*n-1]
-    
-    D_ns = []
-    D_we = []
+    n_s_matrix = []
+    w_e_matrix = []
             
-    for row in n_s_matrix:
-        line = row.split()
-        line = [float(entry) for entry in line if entry]
-        D_ns.append(line)
-        
-    for row in w_e_matrix:
-        line = row.split()
-        line = [float(entry) for entry in line if entry]
-        D_we.append(line)
+    i = 0
+    while len(file[i].split()) == n:
+        row = file[i].split()    
+        row = [float(entry) for entry in row if entry]
+        n_s_matrix.append(row)
+        i += 1
+
+    m = i
+    for j in range(i,i+m+1):
+        row = file[j].split()    
+        row = [float(entry) for entry in row if entry]
+        w_e_matrix.append(row)
         
     if diagonal:
-        diag_matrix = file[2*n-1:]
+        diag_matrix = file[i+m+1:]
         D_diag = []
         for row in diag_matrix:
             line = row.split()
@@ -30,7 +30,7 @@ def read_matrix(file, diagonal):
     else:
         D_diag =[]
         
-    return D_ns, D_we, D_diag
+    return n_s_matrix, w_e_matrix, D_diag
 
 
 def calculate_dist(i,j,D,D_ns,D_we,D_diag=[]):
@@ -49,20 +49,22 @@ def calculate_dist(i,j,D,D_ns,D_we,D_diag=[]):
 
 
 def manhattan_dist(D_ns, D_we, D_diag=[]):
-    n = len(D_we)
-    D = [[None for _ in range(n)] for _ in range(n)]
+    n = len(D_ns[0])
+    m = len(D_we)
+    D = [[None for _ in range(n)] for _ in range(m)]
     D[0][0] = 0
 
-    for i in range(n):
+    for i in range(m):
         for j in range(n):
-            D[i][j] = calculate_dist(i,j,D,D_ns,D_we,D_diag)
+            D[i][j] = calculate_dist(i,j,D,D_ns,D_we,D_diag)         
     return D
 
 
 def backtrack(D,D_ns, D_we, D_diag=[]):
     path = ""
-    n = len(D_we)
-    i = n-1
+    m = len(D_we)
+    n = len(D_ns[0]) 
+    i = m-1
     j = n-1
     while i>0 or j>0:
         
@@ -101,12 +103,14 @@ if __name__ == "__main__":
     D_ns, D_we, D_diag = read_matrix(filtered_input, diagonal)
         
     result = manhattan_dist(D_ns,D_we,D_diag)
+
+    m = len(D_we)
+    n = len(D_ns[0]) 
     
-    n = len(D_we)
-    if result[n-1][n-1] == int(result[n-1][n-1]):
-        print(int(result[n-1][n-1]))
+    if result[m-1][n-1] == int(result[m-1][n-1]):
+        print(int(result[m-1][n-1]))
     else:
-        print(format(result[n-1][n-1], ".2f"))
+        print(format(result[m-1][n-1], ".2f"))
     
     if path:
         print(backtrack(result, D_ns, D_we, D_diag))
