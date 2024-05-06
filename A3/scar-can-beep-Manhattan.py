@@ -31,11 +31,23 @@ def get_grid(file_name):
     grid = {'north-south': [], 'west-east': [], 'diagonal': []}
     list_index = -1
     with open(file_name,'r') as f:
+        no_comments = False
+        line_counter = 0
+        count = -1
         for line in f:
+            count+=1
             if '#' in line or line == '\n':
                 newlist=True
                 continue
             else:
+                if count == 0:
+                    no_comments = True
+                    newlist=True
+                    line_counter = len(line.split())
+                elif no_comments:
+                    if len(line.split()) != line_counter:
+                        newlist=True
+                        line_counter = len(line.split())
                 if newlist:
                     list_index+=1
                     newlist=False
@@ -60,6 +72,28 @@ def get_max(row, col, grid, matrix,check_diagonal):
             return max(east_south,south_east,diagonal)
         else:
             return max(east_south,south_east)
+
+def trace_back(row, col, grid, matrix, diagonal=False, track=''):
+    sights = matrix[row][col]
+    if row == 0:
+        if col == 0:
+            return track
+        else:
+            return trace_back(row, col - 1, grid, matrix, diagonal, 'E' + track)
+    elif col == 0:
+        return trace_back(row - 1, col, grid, matrix, diagonal, 'S' + track)
+
+    east_south = matrix[row - 1][col] + grid['north-south'][row - 1][col]
+    south_east = matrix[row][col - 1] + grid['west-east'][row][col - 1]
+    if diagonal:
+        diagonal_val = matrix[row - 1][col - 1] + grid['diagonal'][row - 1][col - 1]
+        if sights == diagonal_val:
+            return trace_back(row - 1, col - 1, grid, matrix, diagonal, 'D' + track)
+
+    if sights == east_south:
+        return trace_back(row - 1, col, grid, matrix, diagonal, 'S' + track)
+    elif sights == south_east:
+        return trace_back(row, col - 1, grid, matrix, diagonal, 'E' + track)
     
 
 #MAIN
@@ -78,3 +112,6 @@ for row in range(n_row+1):
 
 #OUTPUT
 print(int(matrix[-1][-1]))
+if traceback:
+    track = trace_back(n_row,n_col,grid,matrix,check_diagonal)
+    print(track)
