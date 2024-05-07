@@ -225,7 +225,7 @@ A next major issue is to avoid unintentionally crashing into other bots.
 
 ## Milestones
 
-### Milestone 1 (after one week, second team project meeting 04 May 2023)
+### Milestone 1 (after one week, second team project meeting 14 May 2024)
 
   * Think about all the constants in the game and possible variations --- such that we can discuss
 
@@ -236,7 +236,7 @@ A next major issue is to avoid unintentionally crashing into other bots.
 
   * Look at the code; start implementing
 
-### Milestone 2 (after another three weeks, meeting 25 May 2023)
+### Milestone 2 (after another week, meeting 21 May 2023)
 
   * Write some naive player until the in-between meeting (which e.g. could perform random actions, move always only
     by one towards the pot, hide somewhere etc.)
@@ -244,7 +244,7 @@ A next major issue is to avoid unintentionally crashing into other bots.
   * Let's see that we can plug first things together. Can we already
     watch some (more or less) naive robots fight for gold?
 
-### Milestone 3 (after another week,  meeting 1 June 2023)
+### Milestone 3 (after another week,  meeting 28 May 2024)
 
   * We want to plug everything together and see your robots compete against each other.
 
@@ -252,7 +252,7 @@ A next major issue is to avoid unintentionally crashing into other bots.
     players. Eventually, your smart robots should typically beat the naive
     players.
 
-### Milestone 4 (after another two weeks, meeting 15 June 2023)
+### Milestone 4 (after another three weeks, meeting 18 June 2024)
 
   # By then, your robots should be optimized to compete against each other in
     a tournament.
