@@ -287,7 +287,9 @@ class GameParameters(object):
 		self.healthPerRound = 10
 		self.minMoveHealth = 30 # minimum health that allows to move
 		self.maxHealth = 100
-		self.visibility = 7
+		#self.visibility = 7
+		self.visibility = 2 
+# changed to be like described in GitHub
 		self.healthPerWallCrash = 25
 		self.healthPerPlayerCrash = 15
 		self.healthPerPlayerCrashRandom = 5

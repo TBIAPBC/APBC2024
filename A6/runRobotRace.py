@@ -19,7 +19,9 @@ parser.add_argument('--map', help="specify map file", type=str,default=None)
 args = parser.parse_args()
 
 robot_module_names = {"Test":"test-RobotRace",
-					"Beatme": "beatme-RobotRace"}
+					"Beatme": "beatme-RobotRace",
+					"NaiveRobots": "pblome-RobotRace1",
+     				"SmarterRobots": "pblome-RobotRace2"}
 
 robotmodules = { m:__import__(m) for m in robot_module_names.values() }
 
@@ -27,6 +29,8 @@ if args.map is not None:
    m = Map.read(args.map)
 else:
    m = Map.makeRandom(30, 30, args.density)
+   # test with a smaller map:
+   #m = Map.makeRandom(6,6, args.density)
 
 sim = Simulator(map=m, vizfile=args.viz, framerate=args.framerate)
 
@@ -36,3 +40,5 @@ for name,module_name in robot_module_names.items():
 		sim.add_player(p)
 
 sim.play(rounds=args.number)
+
+
