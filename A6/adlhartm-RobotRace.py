@@ -169,7 +169,7 @@ class TestPlayer(Player):
 
     def move(self, status): 
         
-        maxMoves = 10
+        maxMoves = 5
         
         # update map 
         for x in range(self.ourMap.width):
