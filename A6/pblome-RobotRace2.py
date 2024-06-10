@@ -61,7 +61,7 @@ class DPPlayer(object):
                     
                     if 0 <= new_pos[0] < m and 0 <= new_pos[1] < n:
                         if dists[new_pos[0]][new_pos[1]] == math.inf: #otherwise shorter distance has already been found
-                            if ourMap[new_pos[0], new_pos[1]].status != TileStatus.Wall: # otherwise keep inf
+                            if not ourMap[new_pos[0], new_pos[1]].status.is_blocked():# != TileStatus.Wall: # otherwise keep inf
                                 dists[new_pos[0]][new_pos[1]] = current_dist + 1
                                 queue.append((new_pos[0], new_pos[1]))
             
@@ -126,8 +126,26 @@ class DPPlayer(object):
         return moves
                
     def set_mines(self, status):
-        raise NotImplementedError("'setting mines' not implemented in '%s'." % self.__class__)
-  
+        # sets mines around a neighbouring player
+        map = status.map
+        x,y = status.x,status.y
+        mines = []
+        victim = None
+        for d in D:
+            diff = d.as_xy()
+            neighbour = x+diff[0], y+diff[1]
+            if 0 <= neighbour[0] < map.width and 0 <= neighbour[1] < map.height and status.map[neighbour].obj is not None:
+                if status.map[neighbour].obj.is_player():
+                    victim = neighbour
+        if victim:
+            for d in D:
+                diff = d.as_xy()
+                tile = victim[0]+diff[0], victim[1]+diff[1]
+                if status.map[tile].obj is None and not status.map[tile].status.is_blocked():
+                    # no wall, mine or player
+                    mines.append(tile)              
+        return mines
+          
   
 players = [DPPlayer()]
 
