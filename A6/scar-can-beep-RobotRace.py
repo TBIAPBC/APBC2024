@@ -129,3 +129,14 @@ players = [ScarsPathfindingPlayer()]
 
 if __name__ == "__main__":
     pass
+'''
+Tasks:
+Robots einsammlen
+Algorithmus anschaun/verbessern
+Minen - Gemeinheiten
+Mauer verschieben
+s -R
+nächste Woche keine Stunde
+in 2 Wochen 2 Robots von jedy
+am 18.Juni großes Rennen
+'''
