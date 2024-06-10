@@ -19,7 +19,8 @@ class NaivePlayer(Player):
         self.moves = [D.up, D.left, D.down, D.right, D.up, D.up_left, D.down_left,
 						D.down_right, D.up_right]
     
-      
+        
+        
     def round_begin(self, r):
         
         pass
@@ -66,6 +67,8 @@ class NaivePlayer(Player):
         return directions
         
     def move(self, status): 
+        
+        
         gold_pots_coordinates = list(status.goldPots.keys())
         x_gold, y_gold = gold_pots_coordinates[0]
         
@@ -123,24 +126,42 @@ class NaivePlayer(Player):
         return directions
          
 class TestPlayer(Player):
+
+        
     def reset(self, player_id, max_players, width, height):
         
         self.player_name = "Test player Adlhart"
         self.ourMap = Map(width, height)
         
-      
+        self.distance_cutoff = 0.85
+        self.other_best_paths = []
+        self.last_gLoc = None
+        self.wait_next_gold = False
+        self.center = (int(width/2), int(height/2))
+        self.numMoves = 5
+        
     def get_cost(self, NumMoves): 
         s = 0 
-        
         for i in range(NumMoves): 
-            s+= i+1
+            s += i+1
         return s
-    def round_begin(self, r):
-        pass
-
-    def set_mines(self, status):
-        return []
     
+    def check_others(self, status):
+        
+        # get shortest paths of all other visible players
+        gLoc = list(status.goldPots.keys())[0]   
+        other_paths = []
+       
+        for other in self.status.others: 
+            if other != None:
+                position_other = (other.x, other.y)
+                paths = AllShortestPaths(gLoc, self.ourMap)
+                bestpath = paths.shortestPathFrom(position_other)
+                bestpath.append(gLoc)
+                other_paths.append(bestpath)
+              
+                
+        return other_paths   
     
     def _as_direction(self,curpos,nextpos):
         for d in D:
@@ -153,76 +174,133 @@ class TestPlayer(Player):
         return [self._as_direction(x,y) for x,y in zip([curpos]+path,path)]
     
     
-    def check_others(self, status, gLoc):
-        
-        positions = []
-        distances = []
-        for other in self.status.others: 
-            if other != None:
-                position_other = (other.x, other.y)
-                positions.append(position_other)
-                paths = AllShortestPaths(gLoc, self.ourMap)
-                bestpath = paths.shortestPathFrom(position_other)
-                distances.append(len(bestpath))
-        
-        return distances  , positions      
-
-    def move(self, status): 
-        
-        maxMoves = 5
+    def round_begin(self, r):
+        status = self.status
         
         # update map 
         for x in range(self.ourMap.width):
             for y in range(self.ourMap.height):
+                
                 if status.map[x, y].status != TileStatus.Unknown:
                     self.ourMap[x, y].status = status.map[x, y].status
                     
-  
+                    # update center to some empty tile if necessary
+                    if (x,y) == self.center and status.map[x, y].status != TileStatus.Empty: 
+                        center_updated = False
+                        j = 1
+                        while center_updated == False: 
+                            for xd in [-j, j, 0]: 
+                                if center_updated: 
+                                    break
+                                for yd in [-j, j, 0]:  
+                                    if status.map[x+xd, y+yd].status == TileStatus.Empty: 
+                                        self.center = (x+xd, y+yd)
+                                        center_updated = True
+                                        break
+                            j+=1
+                    
+        self.other_paths = self.check_others(status)
+        
+        self.numMoves = 5
+        
         curpos = (status.x,status.y)  
         budget = status.gold
         gAmount = list(status.goldPots.values())[0]
-        gLoc = list(status.goldPots.keys())[0]    
-       
+        gLoc = list(status.goldPots.keys())[0]   
         
+        
+        # check if gold has moved
+        if self.last_gLoc and gLoc != self.last_gLoc:
+            self.wait_next_gold = False   
+            
+        self.last_gLoc = gLoc
+      
+       
+        # get shortest path to gold     
         paths = AllShortestPaths(gLoc, self.ourMap)
         bestpath = paths.shortestPathFrom(curpos)[1:]
         bestpath.append(gLoc)
-        distance= len(bestpath)
+        distance = len(bestpath)
         cost_full_path = self.get_cost(distance)
-        other_distances, other_positions = self.check_others( status, gLoc)
         
         
+        # check if others closer than cutoff to gold than myself, if possible
+        if len(self.other_paths) > 0:
+            min_other_distances = min([len(x) for x in self.other_paths])
+            if min_other_distances < distance * self.distance_cutoff : 
+                self.wait_next_gold = True
+               
         
-        if len(other_distances) != 0:
-           if min(other_distances) < distance/1.5: 
-               maxMoves = 0
+        # wait for next gold of too far away
+        if distance/self.numMoves > status.goldPotRemainingRounds:
+                self.numMoves = 0
+                self.wait_next_gold = True
               
+                
+        # if waiting for next gold, change path to center in steps of 2
+        if self.wait_next_gold: 
+            numMoves = 2
+            paths = AllShortestPaths(self.center, self.ourMap)
+            
+            bestpath = paths.shortestPathFrom(curpos)[1:]
+            bestpath.append(self.center)
+            
+            if [self.center] ==  bestpath:
+                bestpath = []
+            
+                
+            
+        else: 
+            # go directly for gold if amount in gold less than cost of move
+            if cost_full_path < budget and cost_full_path < gAmount: 
+               self.numMoves = distance
+    
+    
+     
+        self.bestpath = bestpath
         
-        if maxMoves > 0:
-            if cost_full_path < budget and cost_full_path < gAmount : 
-                maxMoves = distance
-            else: 
-                if distance/maxMoves > status.goldPotRemainingRounds:
-                        maxMoves = 0
-                       
-                        
+    def set_mines(self, status):
+        
+        
+        mines = []
+        
+
+        return mines
+      
+
+        
+    def move(self, status): 
+        
+        budget = status.gold
+        curpos = (status.x,status.y)  
         path = []
-        
-        for i in range(min(maxMoves, distance)): 
-            position = bestpath[i]
+        stop_path = False
+    
+        for i in range(min(self.numMoves, len(self.bestpath), 12)): 
+            position = self.bestpath[i]
             budget -= i+1
-           
-            if self.ourMap[position[0], position[1]].status == TileStatus.Empty and budget > 1: 
-                if position not in other_positions:
-                    path.append(position)
-                else: 
-                    break
-                    
+            
+            if self.ourMap[position[0], position[1]].status == TileStatus.Empty and budget > 1 : 
+              
+                # check if my path on others shortest path and stop if other is closer
+                if len(self.other_paths) != 0:
+                    for x in self.other_paths: 
+                        if position in x: 
+                            if x.index(position)-1 <= i: 
+                                stop_path = True
+                                break
             else: 
+                stop_path = True
+                
+            if stop_path == True:
                 break
-        
+            
+            else: 
+                path.append(position)
+          
         return self._as_directions(curpos,path)
+        
+
                 
         
-players = [NaivePlayer(), 
-          TestPlayer()]
+players = [ TestPlayer()]
