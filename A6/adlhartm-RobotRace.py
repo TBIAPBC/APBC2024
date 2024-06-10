@@ -239,7 +239,7 @@ class TestPlayer(Player):
                 
         # if waiting for next gold, change path to center in steps of 2
         if self.wait_next_gold: 
-            numMoves = 2
+            self.numMoves = 2
             paths = AllShortestPaths(self.center, self.ourMap)
             
             bestpath = paths.shortestPathFrom(curpos)[1:]
