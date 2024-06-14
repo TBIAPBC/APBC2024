@@ -10,12 +10,14 @@ from game_utils import Map, Status
 from simulator import Simulator
 from player_base import Player
 from shortestpaths import AllShortestPaths
+from collections import deque
+import numpy as np 
 
 
 class NaivePlayer(Player):
     def reset(self, player_id, max_players, width, height):
         
-        self.player_name = "Naive player Adlhart"
+        self.player_name = "AdlhartNaive"
         self.moves = [D.up, D.left, D.down, D.right, D.up, D.up_left, D.down_left,
 						D.down_right, D.up_right]
     
@@ -125,53 +127,36 @@ class NaivePlayer(Player):
            
         return directions
          
-class TestPlayer(Player):
 
-        
+
+
+
+class AdvancedPlayer():
+    
     def reset(self, player_id, max_players, width, height):
         
-        self.player_name = "Test player Adlhart"
-        self.ourMap = Map(width, height)
+        self.Directions = {( 0,  1): D.up,
+			        ( 0, -1): D.down,
+			        (-1,  0):D.left,
+			        ( 1,  0):D.right,
+			        (-1,  1): D.up_left,
+			        ( 1,  1): D.up_right,
+			        ( -1, -1):D.down_left,
+			        ( 1, -1):D.down_right} 
         
-        self.distance_cutoff = 0.85
+        
+        
+        self.player_name = "Adlhart"
+        self.ourMap = Map(width, height)
+        self.jumps = self.status.params.jumps_ok
+        self.distance_cutoff = 0.80
         self.other_best_paths = []
         self.last_gLoc = None
         self.wait_next_gold = False
         self.center = (int(width/2), int(height/2))
         self.numMoves = 5
-        
-    def get_cost(self, NumMoves): 
-        s = 0 
-        for i in range(NumMoves): 
-            s += i+1
-        return s
     
-    def check_others(self, status):
-        
-        # get shortest paths of all other visible players
-        gLoc = list(status.goldPots.keys())[0]   
-        other_paths = []
-       
-        for other in self.status.others: 
-            if other != None:
-                position_other = (other.x, other.y)
-                paths = AllShortestPaths(gLoc, self.ourMap)
-                bestpath = paths.shortestPathFrom(position_other)
-                bestpath.append(gLoc)
-                other_paths.append(bestpath)
-              
-                
-        return other_paths   
-    
-    def _as_direction(self,curpos,nextpos):
-        for d in D:
-                diff = d.as_xy()
-                if (curpos[0] + diff[0], curpos[1] + diff[1]) ==  nextpos:
-                        return d
-        return None
-
-    def _as_directions(self,curpos,path):
-        return [self._as_direction(x,y) for x,y in zip([curpos]+path,path)]
+     
     
     
     def round_begin(self, r):
@@ -198,10 +183,161 @@ class TestPlayer(Player):
                                         center_updated = True
                                         break
                             j+=1
-                    
-        self.other_paths = self.check_others(status)
+                            
+        for other in self.status.others: 
+            if other != None:
+                x,y = (other.x, other.y)
+                self.ourMap[x, y].status = TileStatus.Wall
+                
+                
+    def set_mines(self, status):
         
+        mines = []
+        return mines  
+          
+            
+    def get_neighbors(self, position, include_jumps = True, include_unknown = True): 
+        """ get neighbors of position """
+        
+        if include_unknown: 
+            open_fields = ['.', '_']
+            
+        else: 
+            open_fileds = ['.']
+        
+        neighbors = []
+        
+        for j in [-1, 1, 0]: 
+            for i in [1, -1, 0]: 
+                if i != 0 or j != 0:
+                    
+                    xnew = position[0]+i
+                    ynew = position[1]+j
+                    
+                    if self.check_map_boundaries((xnew, ynew)):
+                        neighbor_status = self.ourMap[xnew, ynew].status   
+                        if str(neighbor_status) in open_fields: 
+                            neighbors.append((xnew, ynew))
+                        
+                        if include_jumps:
+                            if str(neighbor_status) == "#": 
+                                if self.check_map_boundaries((xnew+i, ynew+j)):
+                                    if str(self.ourMap[xnew+i, ynew+j]) in open_fields: 
+                                        neighbors.append((xnew+i, ynew+j))
+   
+        return neighbors                
+        
+    def check_map_boundaries(self, position): 
+        """check if position exists on map """
+
+        x, y = position 
+
+        if x >= 0 and y >= 0 and x < self.ourMap.width and y < self.ourMap.height:   
+            return True
+        
+        else: 
+            return False             
+            
+       
+        
+    
+      
+    def check_others(self):
+        """get one shortest path of other players """
+        # get shortest paths of all other visible players
+        gLoc = list(self.status.goldPots.keys())[0]   
+        other_paths = []
+         
+        for other in self.status.others: 
+            if other != None:
+                position_other = (other.x, other.y)
+                distances, p = self.get_shortest_distances(position_other, include_jumps=False)
+                best_path = self.get_path(p, gLoc)
+                other_paths.append(best_path)
+                
+                 
+        return other_paths      
+     
+    def get_shortest_distances(self, start, include_jumps=True, get_all =True):
+        """ get shortest distance to all nodes """
+        height = self.ourMap.height
+        width = self.ourMap.width
+        shape = (width, height)
+        
+        distances = np.full(shape, np.inf)
+        
+        
+        distances[start] = 0
+        predecessors = {}
+        
+        que = deque([start])
+        
+        while len(que) != 0: 
+            
+            current_node = que.popleft()
+            current_length = distances[current_node]
+            
+            neighbors = self.get_neighbors(current_node, include_jumps)
+           
+            for n in neighbors: 
+                
+                if current_length + 1 < distances[n]: 
+                    distances[n] = current_length + 1
+                    que.append(n)
+                    predecessors[n] = [current_node]
+                
+                elif current_length + 1 == distances[n]:
+                    if get_all:
+                       predecessors[n].append(current_node)
+                    
+                    
+            
+        return distances, predecessors
+        
+        
+    def get_path(self, p, target): 
+        """ get a shortest path from predecessors """
+        
+        path = [target] 
+        current_node = target
+        while current_node in p: 
+            current_node = random.choice(p[current_node])
+            path.append(current_node)
+            
+        return path[::-1]
+        
+
+             
+    def path_cost(self, path):
+        """ evaluate cost of path """
+        n_moves = 0
+        jumps = 0
+        cost = 0
+        current_node = path[0]
+    
+        for i in range(1, len(path)): 
+            next_node = path[i]
+            x_diff = next_node[0] - current_node[0]
+            y_diff = next_node[1] - current_node[1]
+           
+            if abs(x_diff) == 2 or abs(y_diff) == 2: 
+                jumps +=1
+                n_moves +=1
+                cost += n_moves + 5
+                
+            else: 
+                n_moves +=1
+                cost += n_moves
+                
+            current_node = next_node    
+            
+        return cost  
+    
+    def move(self, status): 
+                                           
         self.numMoves = 5
+        self.other_paths = self.check_others()
+        
         
         curpos = (status.x,status.y)  
         budget = status.gold
@@ -209,86 +345,106 @@ class TestPlayer(Player):
         gLoc = list(status.goldPots.keys())[0]   
         
         
-        # check if gold has moved
+        # check if gold has moved and reset waiting
         if self.last_gLoc and gLoc != self.last_gLoc:
             self.wait_next_gold = False   
-            
         self.last_gLoc = gLoc
       
        
-        # get shortest path to gold     
-        paths = AllShortestPaths(gLoc, self.ourMap)
-        bestpath = paths.shortestPathFrom(curpos)[1:]
-        bestpath.append(gLoc)
-        distance = len(bestpath)
-        cost_full_path = self.get_cost(distance)
+        # get shortest path  lengths to gold including and excluding jumps  
+        distances, p = self.get_shortest_distances(curpos, include_jumps=False)
+        min_distance = distances[gLoc]
+        best_path = self.get_path(p, gLoc)
+        cost_full_path = self.path_cost(best_path)
         
+        if self.jumps:
+            jumping_distances, pj = self.get_shortest_distances(curpos, include_jumps=True)
+            best_jumping_path = self.get_path(pj, gLoc)
+            cost_full_jumping_path = self.path_cost(best_jumping_path)
+            
+    
+            # choose jumping route if gain > 30 and less cost than without jumps
+            if cost_full_path > cost_full_jumping_path and gAmount - cost_full_jumping_path > 30: 
+                best_path = best_jumping_path
+                cost_full_path = cost_full_jumping_path
+                min_distance = jumping_distances[gLoc]
+                
+                
         
         # check if others closer than cutoff to gold than myself, if possible
         if len(self.other_paths) > 0:
             min_other_distances = min([len(x) for x in self.other_paths])
-            if min_other_distances < distance * self.distance_cutoff : 
+            # wait if others close
+            if min_other_distances < min_distance * self.distance_cutoff : 
                 self.wait_next_gold = True
+                
                
-        
-        # wait for next gold of too far away
-        if distance/self.numMoves > status.goldPotRemainingRounds:
+        # wait for next gold if too far away
+        if min_distance/self.numMoves > status.goldPotRemainingRounds:
                 self.numMoves = 0
                 self.wait_next_gold = True
               
-                
+        
+              
+        
         # if waiting for next gold, change path to center in steps of 2
         if self.wait_next_gold: 
             self.numMoves = 2
-            paths = AllShortestPaths(self.center, self.ourMap)
-            
-            bestpath = paths.shortestPathFrom(curpos)[1:]
-            bestpath.append(self.center)
-            
-            if [self.center] ==  bestpath:
-                bestpath = []
-            
-                
+            if curpos != self.center:
+                distances, p = self.get_shortest_distances(curpos, include_jumps=False)
+                best_path = self.get_path(p, self.center) 
+            else:
+                best_path = []
             
         else: 
-            # go directly for gold if amount in gold less than cost of move
-            if cost_full_path < budget and cost_full_path < gAmount: 
-               self.numMoves = distance
-    
-    
-     
-        self.bestpath = bestpath
-        
-    def set_mines(self, status):
-        
-        
-        mines = []
-        
-
-        return mines
-      
+            # go directly for gold if gain more than 30 and in budget 
+            if cost_full_path < budget and gAmount-cost_full_path > 30: 
+               self.numMoves = len(best_path)-1
+               
+            else: 
+               # switch to no jumping path if not going directly
+               if self.jumps:
+                   best_path= self.get_path(p, gLoc)
 
         
-    def move(self, status): 
-        
-        budget = status.gold
-        curpos = (status.x,status.y)  
-        path = []
+
+    
+        # get moves
+        next_node = curpos
+        best_path = best_path[1:]
+        moves = []
         stop_path = False
-    
-        for i in range(min(self.numMoves, len(self.bestpath), 12)): 
-            position = self.bestpath[i]
-            budget -= i+1
+        cost = 0
+        
+        for i in range(min(self.numMoves, len(best_path))):
+          
+            current_node = next_node
+            next_node = best_path[i]
             
-            if self.ourMap[position[0], position[1]].status == TileStatus.Empty and budget > 1 : 
+            x_diff = next_node[0] - current_node[0]
+            y_diff = next_node[1] - current_node[1]
+            
+            # stop if tile not empty
+            if self.ourMap[next_node[0], next_node[1]].status == TileStatus.Empty:
               
                 # check if my path on others shortest path and stop if other is closer
                 if len(self.other_paths) != 0:
                     for x in self.other_paths: 
-                        if position in x: 
-                            if x.index(position)-1 <= i: 
+                        if next_node in x: 
+                            if x.index(next_node)-1 <= i: 
                                 stop_path = True
                                 break
+            
+                # get directions
+                if abs(x_diff) == 2 or abs(y_diff) == 2: 
+                    direction = self.Directions[(x_diff/2, y_diff/2)]
+                    tmp_directions = [direction, direction]
+                    cost += i + 1 + 5
+                else: 
+                    direction = self.Directions[(x_diff, y_diff)]
+                    tmp_directions = [direction]
+                    cost += i+1
+                  
             else: 
                 stop_path = True
                 
@@ -296,11 +452,12 @@ class TestPlayer(Player):
                 break
             
             else: 
-                path.append(position)
-          
-        return self._as_directions(curpos,path)
-        
-
-                
-        
-players = [ TestPlayer()]
+                if cost < budget:
+                    moves.extend(tmp_directions)
+                else: 
+                    stop_path = True 
+      
+        return moves
+    
+    
+players = [ AdvancedPlayer()]
