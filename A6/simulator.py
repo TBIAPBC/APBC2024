@@ -80,13 +80,16 @@ class Simulator(object):
 		# duplicate the public status object in the player object
 		p.status = self._pubStat[-1]
 
-	def play(self, *, rounds, mine_mode):
+	def play(self, *, rounds, mine_mode, jumps_allowed=False):
 		rounds = int(rounds)
 		self.mine_mode = mine_mode
+		self.jumps_allowed = jumps_allowed
+    
 		for pId in range(len(self._players)):
 			# to avoid breaking the player interface,
 			# set number of rounds in the players status objects
 			self._pubStat[pId].params.rounds=rounds
+			self._pubStat[pId].params.jumps_ok=jumps_allowed
 
 			self._players[pId].reset(pId, len(self._players), self.map.width, self.map.height)
 
@@ -339,10 +342,34 @@ class Simulator(object):
 					continue
 
 				# otherwise, actually try to move
-				moveStatusPerPlayer[pId][mId] = MoveStatus.Done
 				diff = movesPerPlayer[pId][mId].as_xy()
 				then = now[0] + diff[0], now[1] + diff[1]
+				
+				# Check for jump over wall, if enabled per game setting flag --allow_jumps
+				if self.jumps_allowed:
+					
+					# Triggers if the destination is a wall and the same movement direction is queued twice in a row
+					JUMP_COST = 5
+					if (then[0] >= 0 and then[0] < self.map.width							# Check if current destination is within map boundaries
+							and then[1] >= 0 and then[1] < self.map.height			
+							and self.map[then].status == TileStatus.Wall					# Check if next tile is a wall
+							and mId+1 < len(movesPerPlayer[pId])							# Check if player has a second move queued
+							and movesPerPlayer[pId][mId+1] == movesPerPlayer[pId][mId]		# And the second move is the same as the first
+							and self._status[pId].gold >= JUMP_COST):						# Player has enough money to jump
+						
+						# Verify that target field is within map boundaries and not a wall
+						target_field = now[0] + diff[0]*2, now[1] + diff[1]*2
+						if (target_field[0] >= 0 and target_field[0] < self.map.width
+		  						and target_field[1] >= 0 and target_field[1] < self.map.height
+								and self.map[target_field] != TileStatus.Wall):
+							then = now[0] + diff[0]*2, now[1] + diff[1]*2
+							movesPerPlayer[pId] = movesPerPlayer[pId][:mId] + movesPerPlayer[pId][mId+1:]
+							moveStatusPerPlayer[pId] = moveStatusPerPlayer[pId][:mId] + moveStatusPerPlayer[pId][mId+1:]
+							self._status[pId].gold -= JUMP_COST
+
 				moves[pId] = (now, then)
+				moveStatusPerPlayer[pId][mId] = MoveStatus.Done
+
 			# check collisions
 			# - with walls or the boundary
 			for pId in range(len(moves)):
@@ -635,9 +662,12 @@ class Simulator(object):
 
 	def __str__(self):
 		s = str(self.map)
-		s += "Player   Health   Gold      Position\n"
+		s += "Player             Health   Gold      Position\n"
+
 		for i in range(len(self._players)):
-			s += "{:<9}{:<9}{:<9} {},{}\n".format(nameFromPlayerId(i), 
+			player_name = f"{nameFromPlayerId(i).upper()} {self._players[i].player_name:<15}"[:17]
+			# player_name = nameFromPlayerId(i)
+			s += "{:<9}  {:<9}{:<9} {},{}\n".format(player_name, 
 				self._status[i].health, self._status[i].gold, self._status[i].x, self._status[i].y)
 		s += "Gold Pots:\n"
 		for coord, amount in self._goldPots.items():
