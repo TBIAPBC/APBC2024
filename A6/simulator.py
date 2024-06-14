@@ -347,16 +347,21 @@ class Simulator(object):
 					
 					# Triggers if the destination is a wall and the same movement direction is queued twice in a row
 					JUMP_COST = 5
-					if (self.map[then].status == TileStatus.Wall							# Check if next tile is a wall
-							and then[0] > 0 and then[0] <= self.map.width - 1				# Check if there's still a tile to jump to horizontally
-							and then[1] > 0 and then[1] <= self.map.height - 1				# Check if there's still a tile to jump to vertically
+					if (then[0] >= 0 and then[0] < self.map.width							# Check if current destination is within map boundaries
+							and then[1] >= 0 and then[1] < self.map.height			
+							and self.map[then].status == TileStatus.Wall					# Check if next tile is a wall
 							and mId+1 < len(movesPerPlayer[pId])							# Check if player has a second move queued
 							and movesPerPlayer[pId][mId+1] == movesPerPlayer[pId][mId]		# And the second move is the same as the first
 							and self._status[pId].gold >= JUMP_COST):						# Player has enough money to jump
-						then = now[0] + diff[0]*2, now[1] + diff[1]*2
-						movesPerPlayer[pId] = movesPerPlayer[pId][:mId] + movesPerPlayer[pId][mId+1:]
-						moveStatusPerPlayer[pId] = moveStatusPerPlayer[pId][:mId] + moveStatusPerPlayer[pId][mId+1:]
-						self._status[pId].gold -= JUMP_COST
+						
+						# Verify that target field is within map boundaries
+						target_field = now[0] + diff[0]*2, now[1] + diff[1]*2
+						if (target_field[0] >= 0 and target_field[0] < self.map.width
+		  						and target_field[1] >= 0 and target_field[1] < self.map.height):
+							then = now[0] + diff[0]*2, now[1] + diff[1]*2
+							movesPerPlayer[pId] = movesPerPlayer[pId][:mId] + movesPerPlayer[pId][mId+1:]
+							moveStatusPerPlayer[pId] = moveStatusPerPlayer[pId][:mId] + moveStatusPerPlayer[pId][mId+1:]
+							self._status[pId].gold -= JUMP_COST
 
 				moves[pId] = (now, then)
 				moveStatusPerPlayer[pId][mId] = MoveStatus.Done
