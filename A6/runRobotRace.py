@@ -15,6 +15,7 @@ parser.add_argument('--number', help="number of rounds", type=int, default=1000)
 parser.add_argument('--density', help="map density", type=float, default=0.4)
 parser.add_argument('--framerate', help="specify framerate of the visualization", type=int, default=8)
 parser.add_argument('--map', help="specify map file", type=str,default=None)
+parser.add_argument('--mine_mode', help="specify what mines do. Options are wall, scramble and damage", type=str, default="wall")
 parser.add_argument('--allow_jumps', help="allow players to jump over walls by running into the same direction twice", action=argparse.BooleanOptionalAction)
 
 args = parser.parse_args()
@@ -36,4 +37,4 @@ for name,module_name in robot_module_names.items():
 		p.player_modname = name
 		sim.add_player(p)
 
-sim.play(rounds=args.number, jumps_allowed=args.allow_jumps)
+sim.play(rounds=args.number, jumps_allowed=args.allow_jumps, mine_mode=args.mine_mode.lower())
