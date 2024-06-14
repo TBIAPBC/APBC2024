@@ -354,10 +354,11 @@ class Simulator(object):
 							and movesPerPlayer[pId][mId+1] == movesPerPlayer[pId][mId]		# And the second move is the same as the first
 							and self._status[pId].gold >= JUMP_COST):						# Player has enough money to jump
 						
-						# Verify that target field is within map boundaries
+						# Verify that target field is within map boundaries and not a wall
 						target_field = now[0] + diff[0]*2, now[1] + diff[1]*2
 						if (target_field[0] >= 0 and target_field[0] < self.map.width
-		  						and target_field[1] >= 0 and target_field[1] < self.map.height):
+		  						and target_field[1] >= 0 and target_field[1] < self.map.height
+								and self.map[target_field] != TileStatus.Wall):
 							then = now[0] + diff[0]*2, now[1] + diff[1]*2
 							movesPerPlayer[pId] = movesPerPlayer[pId][:mId] + movesPerPlayer[pId][mId+1:]
 							moveStatusPerPlayer[pId] = moveStatusPerPlayer[pId][:mId] + moveStatusPerPlayer[pId][mId+1:]
