@@ -49,15 +49,21 @@ class Llewi0(Player):
                     offset += vision
                     if offset >= width//2 or offset >= height//2:
                            break
-                
+                                       
                 # Find first that is unvisited
                 for node in nodes:
                        if ourMap[node].status == TileStatus.Unknown:
                               return node
                 return None
+        
+        def _required_gold(self, num_steps):
+               cost = -1
+               for i in range(1, num_steps+1):
+                      cost += i
+               return cost
 
         def move(self, status):
-                
+
                 # Update our map
                 ourMap = self.ourMap
                 for x in range(ourMap.width):
@@ -65,38 +71,50 @@ class Llewi0(Player):
                                 if status.map[x, y].status != TileStatus.Unknown:
                                         ourMap[x, y].status = status.map[x, y].status
                 
-                print("MY VISION")
-                print(ourMap)
-                
                 # Find shortest path to gold
                 shortest_gold = None
                 for goldPot in status.goldPots:
                        paths = AllShortestPaths(goldPot, ourMap)
                        path = paths.randomShortestPathFrom((status.x, status.y))
                        path.append(goldPot)
+                       
                        if (shortest_gold is None) or (len(path) < len(shortest_gold)):
                               shortest_gold = path
                 
-                # If it's in vision range always go
-                if (shortest_gold is not None) and len(shortest_gold) < self.vision:
-                       retval = self._as_directions((status.x,status.y), shortest_gold)
-                       #print(f"0 {retval}")
-                       return retval
+                # Check how much of the path to gold is known
+                known_fields = 0
+                for i in range(len(shortest_gold)):
+                        if ourMap[shortest_gold[i]].status == TileStatus.Unknown:
+                                known_fields = i
+                                break
+
+                # Find unvisited field
+                target = self._find_unvisited_field()
+
+                # If gold is close enough go
+                if (shortest_gold is not None and (len(shortest_gold) < 15 or not target)):
+                        retval = self._as_directions((status.x,status.y), shortest_gold)
+                        steps_to_gold = len(retval)
+
+                        if  self._required_gold(steps_to_gold) > status.gold:
+                               steps_to_gold = 5
+                        
+                        steps_to_gold = min(steps_to_gold, known_fields+1)
+                        return retval[:steps_to_gold]
 
                 # Otherwise check out map
-                target = self._find_unvisited_field()
                 if target:
                        paths = AllShortestPaths(target, ourMap)
                        path = paths.randomShortestPathFrom((status.x, status.y))
-                       retval = self._as_directions((status.x,status.y), path)[:3]
+                       retval = self._as_directions((status.x,status.y), path)[:1]
                        #print(f"1 {retval}")
                        return retval
                 
+                # (Fallback, code below only reached in edge cases)
                 # Map has been explored, go for gold
                 if len(shortest_gold) > 10:
                        shortest_gold = shortest_gold[:10]
                 retval = self._as_directions((status.x,status.y), shortest_gold)
-                #print(f"2 {retval}")
                 return retval
 
         def moveOld(self, status):
