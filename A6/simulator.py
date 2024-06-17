@@ -6,6 +6,7 @@ import multiprocessing
 import threading
 import queue
 import time
+from shortestpaths import AllShortestPaths
 
 from game_utils import nameFromPlayerId
 from game_utils import Direction, MoveStatus
@@ -79,12 +80,16 @@ class Simulator(object):
 		# duplicate the public status object in the player object
 		p.status = self._pubStat[-1]
 
-	def play(self, *, rounds):
+	def play(self, *, rounds, mine_mode, jumps_allowed=False):
 		rounds = int(rounds)
+		self.mine_mode = mine_mode
+		self.jumps_allowed = jumps_allowed
+    
 		for pId in range(len(self._players)):
 			# to avoid breaking the player interface,
 			# set number of rounds in the players status objects
 			self._pubStat[pId].params.rounds=rounds
+			self._pubStat[pId].params.jumps_ok=jumps_allowed
 
 			self._players[pId].reset(pId, len(self._players), self.map.width, self.map.height)
 
@@ -337,10 +342,34 @@ class Simulator(object):
 					continue
 
 				# otherwise, actually try to move
-				moveStatusPerPlayer[pId][mId] = MoveStatus.Done
 				diff = movesPerPlayer[pId][mId].as_xy()
 				then = now[0] + diff[0], now[1] + diff[1]
+				
+				# Check for jump over wall, if enabled per game setting flag --allow_jumps
+				if self.jumps_allowed:
+					
+					# Triggers if the destination is a wall and the same movement direction is queued twice in a row
+					JUMP_COST = 5
+					if (then[0] >= 0 and then[0] < self.map.width							# Check if current destination is within map boundaries
+							and then[1] >= 0 and then[1] < self.map.height			
+							and self.map[then].status == TileStatus.Wall					# Check if next tile is a wall
+							and mId+1 < len(movesPerPlayer[pId])							# Check if player has a second move queued
+							and movesPerPlayer[pId][mId+1] == movesPerPlayer[pId][mId]		# And the second move is the same as the first
+							and self._status[pId].gold >= JUMP_COST):						# Player has enough money to jump
+						
+						# Verify that target field is within map boundaries and not a wall
+						target_field = now[0] + diff[0]*2, now[1] + diff[1]*2
+						if (target_field[0] >= 0 and target_field[0] < self.map.width
+		  						and target_field[1] >= 0 and target_field[1] < self.map.height
+								and self.map[target_field] != TileStatus.Wall):
+							then = now[0] + diff[0]*2, now[1] + diff[1]*2
+							movesPerPlayer[pId] = movesPerPlayer[pId][:mId] + movesPerPlayer[pId][mId+1:]
+							moveStatusPerPlayer[pId] = moveStatusPerPlayer[pId][:mId] + moveStatusPerPlayer[pId][mId+1:]
+							self._status[pId].gold -= JUMP_COST
+
 				moves[pId] = (now, then)
+				moveStatusPerPlayer[pId][mId] = MoveStatus.Done
+
 			# check collisions
 			# - with walls or the boundary
 			for pId in range(len(moves)):
@@ -353,7 +382,8 @@ class Simulator(object):
 				if (
 					dest[0] < 0 or dest[0] >= self.map.width
 					or dest[1] < 0 or dest[1] >= self.map.height
-					or self.map[dest].status != TileStatus.Empty
+					or self.map[dest].status == TileStatus.Wall
+					or (self.mine_mode == "wall" and self.map[dest].status == TileStatus.Mine)
 					):
 					moveStatusPerPlayer[pId][mId] = MoveStatus.CrashWall
 					cancelRest(pId, mId)
@@ -483,6 +513,98 @@ class Simulator(object):
 					self.goldPotRemainingRounds = self.params.goldPotTimeOut
 			for i in range(numGoldPotsTaken):
 				self._add_gold_pot()
+			
+			# Mine collision
+			for pId in range(len(self._status)):
+				x, y = (self._status[pId].x, self._status[pId].y)
+				if self.map[x, y].status == TileStatus.Mine:
+					self._trigger_mine(x, y, pId)
+					self.map[x, y].status = TileStatus.Empty
+					self._mines.pop((x, y))
+					print(f"Player {pId} triggered mine at ({x}, {y})")					
+	
+	def _trigger_mine(self, x, y, pId):
+		if self.mine_mode == "damage":
+			MINE_DAMAGE = 30
+			self._decrease_health(pId, self.params.healthPerWallCrash)
+
+		if self.mine_mode == "scramble":
+			self._scramble_walls(x, y)
+			
+
+	def _scramble_walls(self, x, y):
+		
+		r = 3
+		x_low = max(0, x-r)
+		x_high = min(self.map.width-1, x+r)
+		y_low = max(0, y-r)
+		y_high = min(self.map.height-1, y+r)
+
+		# Try scrambling walls, players and gold. Rerun if gold is unreachable, stop after 10 failed attempts.
+		for i in range(10):
+
+			# Count walls
+			wall_count = 0
+			for x in range(x_low, x_high+1):
+				for y in range(y_low, y_high+1):
+					if self.map[x, y].status == TileStatus.Wall:
+						wall_count += 1
+						self.map[x, y].status = TileStatus.Empty
+
+			# Find players to rearrange
+			player_ids = []
+			for pId in range(len(self._status)):
+				if x_low <= self._status[pId].x <= x_high and y_low <= self._status[pId].y <= y_high:
+					player_ids.append(pId)
+					self.map[self._status[pId].x, self._status[pId].y].obj = None
+
+			# Find gold to redistribute
+			gold_amounts = []
+			gold_coords = []
+			for coord, amount in self._goldPots.items():
+				if x_low <= coord[0] <= x_high and y_low <= coord[1] <= y_high:
+					gold_amounts.append(amount)
+					gold_coords.append(coord)
+			for coord in gold_coords:
+				del self._goldPots[coord]
+				self.map[coord].obj = None
+
+			# Randomly create new walls
+			remaining_coords = [(x, y) for x in range(x_low, x_high+1) for y in range(y_low, y_high+1)]
+			new_wall_coords = random.sample(remaining_coords, wall_count)
+			for coords in new_wall_coords:
+				self.map[coords].status = TileStatus.Wall
+
+			# Randomly redistribute gold
+			remaining_coords = [coord for coord in remaining_coords if coord not in new_wall_coords]
+			new_gold_coords = random.sample(remaining_coords, len(gold_amounts))
+			for i, coords in enumerate(new_gold_coords):
+				self._goldPots[coords] = gold_amounts[i]
+				self.map[coords].obj = TileObject.makeGold()
+
+			# Randomly redistribute players
+			remaining_coords = [coord for coord in remaining_coords if coord not in new_gold_coords]
+			new_player_coords = random.sample(remaining_coords, len(player_ids))
+			for i, coords in enumerate(new_player_coords):
+				pId = player_ids[i]
+				self.map[coords].obj = TileObject.makePlayer(pId)
+				self._status[pId].x, self._status[pId].y = coords
+			
+
+			# Check that redistributed gold (or other gold) is still reachable for all players
+			rerun = False
+			gLoc = new_gold_coords[0] if len(new_gold_coords) > 0 else next(iter(self._goldPots.keys()))
+			paths = AllShortestPaths(gLoc, self.map)
+			for pId in player_ids:
+				best_path = paths.shortestPathFrom((self._status[pId].x, self._status[pId].y))
+				if not best_path:
+					rerun = True
+		
+			if not rerun:
+				return
+
+		print("Mine scramble not successful after 10 attempts, resuming simulator")
+
 
 	def _handle_healing(self, r):
 		# TODO
@@ -540,9 +662,12 @@ class Simulator(object):
 
 	def __str__(self):
 		s = str(self.map)
-		s += "Player   Health   Gold      Position\n"
+		s += "Player             Health   Gold      Position\n"
+
 		for i in range(len(self._players)):
-			s += "{:<9}{:<9}{:<9} {},{}\n".format(nameFromPlayerId(i), 
+			player_name = f"{nameFromPlayerId(i).upper()} {self._players[i].player_name:<15}"[:17]
+			# player_name = nameFromPlayerId(i)
+			s += "{:<9}  {:<9}{:<9} {},{}\n".format(player_name, 
 				self._status[i].health, self._status[i].gold, self._status[i].x, self._status[i].y)
 		s += "Gold Pots:\n"
 		for coord, amount in self._goldPots.items():
